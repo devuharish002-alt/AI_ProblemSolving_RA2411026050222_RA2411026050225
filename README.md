@@ -41,7 +41,7 @@ Frontend: Visit the live demo link above. Select a Start and Goal node, or use t
 Backend: Run python python_models/route_finder.py in your terminal. Choose option 1 for the default map or option 2 to build a custom graph via text input.
 
 ## Sample Output:
-![Navigation](GPSoutput.png)
+![Navigation](GPSoutput2.png)
 
 
 # 2) Loan Approval Prediction System - Classification Task (Problem 19)
