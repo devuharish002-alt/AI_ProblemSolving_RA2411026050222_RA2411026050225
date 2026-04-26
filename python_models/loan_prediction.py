@@ -1,87 +1,123 @@
+"""
+Loan Approval Prediction System
+Problem Statement 19 Implementation
+Algorithm: K-Nearest Neighbors (KNN)
+Implementation: Pure Python (No external libraries)
+"""
+
 import math
 import random
 
-# 1. Generate synthetic dataset (Pure Python implementation)
-# Features: [Income, Credit_Score, Employment_Status, Loan_Amount]
-# Employment Encoding: 0 = Unemployed, 1 = Self-Employed, 2 = Employed
-def generate_data(num_samples=200):
-    random.seed(42)
-    dataset = []
-    for _ in range(num_samples):
-        income = random.randint(20000, 120000)
-        credit = random.randint(300, 850)
-        emp = random.choice([0, 1, 2])
-        loan = random.randint(5000, 50000)
-        
-        # Create a logical rule for the synthetic target so the model can learn
-        # Higher income, higher credit, and stable employment increase approval odds
-        score = (income / 120000) * 0.4 + (credit / 850) * 0.4 + (emp / 2) * 0.2
-        approved = 1 if score > 0.55 else 0 
-        
-        dataset.append(([income, credit, emp, loan], approved))
-    return dataset
-
-data = generate_data()
-
-# Split into Training (80%) and Testing (20%) sets
-train_size = int(len(data) * 0.8)
-train_data = data[:train_size]
-test_data = data[train_size:]
-
-# 2. Custom K-Nearest Neighbors (KNN) Classifier
-def euclidean_distance(row1, row2):
-    # Normalize data on the fly so large numbers (like Income) don't overpower small numbers (like Emp Status)
-    max_vals = [120000, 850, 2, 50000]
-    distance = 0.0
-    for i in range(len(row1)):
-        norm1 = row1[i] / max_vals[i]
-        norm2 = row2[i] / max_vals[i]
-        distance += (norm1 - norm2) ** 2
-    return math.sqrt(distance)
-
-def predict_knn(train_set, test_row, k=5):
-    distances = []
-    for train_row, label in train_set:
-        dist = euclidean_distance(test_row, train_row)
-        distances.append((dist, label))
+class LoanDataGenerator:
+    """Class responsible for generating synthetic financial data."""
     
-    # Sort by distance (closest neighbors first)
-    distances.sort(key=lambda x: x[0])
-    neighbors = distances[:k]
+    def __init__(self, num_samples: int = 200, seed: int = 42):
+        self.num_samples = num_samples
+        random.seed(seed)
+        self.dataset = []
+
+    def generate(self) -> list:
+        """Generates synthetic loan applications based on defined logic."""
+        for _ in range(self.num_samples):
+            income = random.randint(20000, 120000)
+            credit = random.randint(300, 850)
+            emp = random.choice([0, 1, 2]) # 0=Unemployed, 1=Self, 2=Employed
+            loan = random.randint(5000, 50000)
+            
+            # Logical target generation
+            score = (income / 120000) * 0.4 + (credit / 850) * 0.4 + (emp / 2) * 0.2
+            approved = 1 if score > 0.55 else 0 
+            
+            self.dataset.append(([income, credit, emp, loan], approved))
+        return self.dataset
+
+class KNNClassifier:
+    """Custom implementation of the K-Nearest Neighbors Algorithm."""
     
-    # Majority vote
-    votes = [label for _, label in neighbors]
-    prediction = max(set(votes), key=votes.count)
-    return prediction
+    def __init__(self, k: int = 5):
+        self.k = k
+        self.train_data = []
+        self.max_vals = [120000, 850, 2, 50000] # For feature normalization
 
-# 3. Model Evaluation
-print("--- Loan Approval Prediction System (Pure Python ML) ---")
-correct = 0
-for test_row, actual_label in test_data:
-    prediction = predict_knn(train_data, test_row, k=5)
-    if prediction == actual_label:
-        correct += 1
+    def fit(self, train_data: list):
+        """Loads training data into the model."""
+        self.train_data = train_data
 
-accuracy = correct / float(len(test_data))
-print(f"Model Accuracy (KNN Classification): {accuracy * 100:.2f}%\n")
+    def _euclidean_distance(self, row1: list, row2: list) -> float:
+        """Calculates normalized Euclidean distance between two data points."""
+        distance = 0.0
+        for i in range(len(row1)):
+            norm1 = row1[i] / self.max_vals[i]
+            norm2 = row2[i] / self.max_vals[i]
+            distance += (norm1 - norm2) ** 2
+        return math.sqrt(distance)
 
-# 4. Predict for a new test applicant
-print("--- Testing a New Applicant ---")
-test_income = 75000
-test_credit = 720
-test_emp_str = 'Employed'
-test_emp_encoded = 2 # 2 maps to Employed
-test_loan = 20000
+    def predict(self, test_row: list) -> int:
+        """Predicts the class label for a given test row."""
+        distances = []
+        for train_row, label in self.train_data:
+            dist = self._euclidean_distance(test_row, train_row)
+            distances.append((dist, label))
+        
+        # Sort by closest distance
+        distances.sort(key=lambda x: x[0])
+        neighbors = distances[:self.k]
+        
+        # Calculate majority vote
+        votes = [label for _, label in neighbors]
+        return max(set(votes), key=votes.count)
 
-print(f"Applicant Details: Income=${test_income}, Credit={test_credit}, Status={test_emp_str}, Loan=${test_loan}")
+    def evaluate(self, test_data: list) -> float:
+        """Evaluates model accuracy against a test dataset."""
+        correct = 0
+        for test_row, actual_label in test_data:
+            prediction = self.predict(test_row)
+            if prediction == actual_label:
+                correct += 1
+        return correct / float(len(test_data))
 
-# Group applicant features into a list
-new_applicant_features = [test_income, test_credit, test_emp_encoded, test_loan]
+def main():
+    print("="*50)
+    print(" AI LOAN APPROVAL PREDICTOR (KNN) ".center(50, "="))
+    print("="*50)
 
-# Run prediction
-result = predict_knn(train_data, new_applicant_features, k=5)
+    # 1. Generate Data
+    print("\n[System] Generating synthetic financial dataset...")
+    generator = LoanDataGenerator(num_samples=200)
+    data = generator.generate()
 
-if result == 1:
-    print("Result: Loan APPROVED")
-else:
-    print("Result: Loan REJECTED")
+    # 2. Split Data
+    train_size = int(len(data) * 0.8)
+    train_data = data[:train_size]
+    test_data = data[train_size:]
+    print(f"[System] Data split: {len(train_data)} Train | {len(test_data)} Test")
+
+    # 3. Train & Evaluate Model
+    model = KNNClassifier(k=5)
+    model.fit(train_data)
+    
+    accuracy = model.evaluate(test_data)
+    print(f"[System] Model trained successfully.")
+    print(f"[Result] Validation Accuracy: {accuracy * 100:.2f}%\n")
+
+    # 4. Interactive Testing
+    print("-" * 50)
+    print("Test a New Applicant:")
+    test_income = int(input("Enter Annual Income ($): ") or 75000)
+    test_credit = int(input("Enter Credit Score (300-850): ") or 720)
+    print("Employment Status: [0] Unemployed  [1] Self-Employed  [2] Employed")
+    test_emp = int(input("Enter Status Code: ") or 2)
+    test_loan = int(input("Enter Loan Amount ($): ") or 20000)
+
+    features = [test_income, test_credit, test_emp, test_loan]
+    prediction = model.predict(features)
+
+    print("\n" + "="*50)
+    if prediction == 1:
+        print(" FINAL DECISION: LOAN APPROVED ".center(50, " "))
+    else:
+        print(" FINAL DECISION: LOAN REJECTED ".center(50, " "))
+    print("="*50 + "\n")
+
+if __name__ == "__main__":
+    main()
