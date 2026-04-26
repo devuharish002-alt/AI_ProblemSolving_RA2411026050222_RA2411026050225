@@ -36,3 +36,6 @@ Proximity is determined using the norm (Euclidean distance) between feature vect
 ## Implementation
 Frontend: A sleek, glassmorphism-themed dashboard featuring a dynamic particle-grid background and instant client-side inference.
 Backend: A purely mathematical Python implementation without external dependencies, focusing on distance matrices and majority voting logic.
+
+## Sample Output
+![Loan Application Approval](Loanoutput.png)
